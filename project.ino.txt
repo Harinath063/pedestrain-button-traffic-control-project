@@ -1,0 +1,106 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// Pins
+int redLight = 13;
+int yellowLight = 12;
+int greenLight = 11;
+int irSensor = 7;
+int pedestrianBtn = 2;
+
+// Pedestrian limit
+int pedestrianCount = 0;
+int maxPedestrianCount = 25;
+
+void setup() {
+  pinMode(redLight, OUTPUT);
+  pinMode(yellowLight, OUTPUT);
+  pinMode(greenLight, OUTPUT);
+
+  pinMode(irSensor, INPUT);
+  pinMode(pedestrianBtn, INPUT);
+
+  lcd.init();
+  lcd.backlight();
+
+  lcd.setCursor(0, 0);
+  lcd.print("Traffic System");
+  lcd.setCursor(0, 1);
+  lcd.print("Ped Left: 25");
+
+  digitalWrite(redLight, HIGH);
+}
+
+void loop() {
+
+  // 🔴 BUTTON CHECK (ACTIVE LOW)
+  if (digitalRead(pedestrianBtn) == LOW && pedestrianCount < maxPedestrianCount) {
+    pedestrianCrossing();
+    pedestrianCount++;
+    delay(300); // debounce
+  }
+
+  // Vehicle detection
+  if (digitalRead(irSensor) == HIGH) {
+    greenLightOn(6000);
+  } else {
+    greenLightOn(3000);
+  }
+
+  yellowLightOn();
+  redLightOn();
+}
+
+// ===== FUNCTIONS =====
+
+void greenLightOn(int t) {
+  digitalWrite(redLight, LOW);
+  digitalWrite(yellowLight, LOW);
+  digitalWrite(greenLight, HIGH);
+  delay(t);
+}
+
+void yellowLightOn() {
+  digitalWrite(redLight, LOW);
+  digitalWrite(yellowLight, HIGH);
+  digitalWrite(greenLight, LOW);
+  delay(2000);
+}
+
+void redLightOn() {
+  digitalWrite(redLight, HIGH);
+  digitalWrite(yellowLight, LOW);
+  digitalWrite(greenLight, LOW);
+  delay(3000);
+}
+
+void pedestrianCrossing() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Ped Request");
+  lcd.setCursor(0, 1);
+  lcd.print("Used: ");
+  lcd.print(pedestrianCount + 1);
+  lcd.print("/25");
+
+  digitalWrite(redLight, HIGH);
+  digitalWrite(yellowLight, LOW);
+  digitalWrite(greenLight, LOW);
+  delay(5000);
+
+  lcd.clear();
+  if (pedestrianCount + 1 >= maxPedestrianCount) {
+    lcd.setCursor(0, 0);
+    lcd.print("Limit Reached");
+    lcd.setCursor(0, 1);
+    lcd.print("Please Wait");
+  } else {
+    lcd.setCursor(0, 0);
+    lcd.print("Traffic System");
+    lcd.setCursor(0, 1);
+    lcd.print("Ped Left: ");
+    lcd.print(maxPedestrianCount - (pedestrianCount + 1));
+  }
+}
